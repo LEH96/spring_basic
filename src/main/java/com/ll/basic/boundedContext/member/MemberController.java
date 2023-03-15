@@ -14,29 +14,31 @@ public class MemberController {
     @GetMapping("member/login")
     @ResponseBody
     public Map<String, String> tryLogin(String username, String password){
-        List<User> list = randomUesrMake();
+        List<User> list = randomUserMake();
         Map<String, String> result = new LinkedHashMap<>();
 
-        for(User u : list){
-            if(u.getName().equals(username)){
-                if(u.getPwd().equals(password)){
-                    result.put("resultCode","S-1");
-                    result.put("msg", "%s 님 환영합니다.".formatted(username));
-                } else {
-                    result.put("resultCode","F-1");
-                    result.put("msg", "비밀번호가 일치하지 않습니다.");
-                }
-            }
-        }
-        if(result.size() < 1){
+        User u = list.stream()
+                .filter(e -> e.getName().equals(username))
+                .findFirst()
+                .orElse(null);
+
+        if(u == null) {
             result.put("resultCode","F-2");
             result.put("msg", "%s(은)는 존재하지 않는 회원입니다.".formatted(username));
+        } else {
+            if(u.getPwd().equals(password)){
+                result.put("resultCode","S-1");
+                result.put("msg", "%s 님 환영합니다.".formatted(username));
+            } else {
+                result.put("resultCode","F-1");
+                result.put("msg", "비밀번호가 일치하지 않습니다.");
+            }
         }
 
         return result;
     }
 
-    private List<User> randomUesrMake() {
+    private List<User> randomUserMake() {
         List<User> userList = new ArrayList<>();
         userList.add(new User("user1","1234"));
         userList.add(new User("abc","12345"));
