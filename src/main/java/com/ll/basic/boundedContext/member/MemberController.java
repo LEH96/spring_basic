@@ -1,32 +1,33 @@
 package com.ll.basic.boundedContext.member;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
+@AllArgsConstructor
 public class MemberController {
+    private Map<String, String> result;
+
     @GetMapping("member/login")
     @ResponseBody
-    public Map<String, String> tryLogin(String username, String password){
-        List<User> list = randomUserMake();
-        Map<String, String> result = new LinkedHashMap<>();
+    public Map<String, String> tryLogin(String username, String password, HttpServletResponse resp){
+        result = new LinkedHashMap<>();
 
-        User u = list.stream()
-                .filter(e -> e.getName().equals(username))
-                .findFirst()
-                .orElse(null);
+        User u = MemberService.checkUser(username);
 
         if(u == null) {
             result.put("resultCode","F-2");
             result.put("msg", "%s(은)는 존재하지 않는 회원입니다.".formatted(username));
         } else {
             if(u.getPwd().equals(password)){
+                resp.addCookie(new Cookie("username", username));
                 result.put("resultCode","S-1");
                 result.put("msg", "%s 님 환영합니다.".formatted(username));
             } else {
@@ -38,19 +39,43 @@ public class MemberController {
         return result;
     }
 
-    private List<User> randomUserMake() {
-        List<User> userList = new ArrayList<>();
-        userList.add(new User("user1","1234"));
-        userList.add(new User("abc","12345"));
-        userList.add(new User("test","12346"));
-        userList.add(new User("love","12347"));
-        userList.add(new User("like","12348"));
-        userList.add(new User("giving","12349"));
-        userList.add(new User("thanks","123410"));
-        userList.add(new User("hello","123411"));
-        userList.add(new User("good","123412"));
-        userList.add(new User("peace","123413"));
+    @GetMapping("/member/me")
+    @ResponseBody
+    public Map<String, String> showUserInfo(HttpServletRequest req){
+        result = new LinkedHashMap<>();
+        String username = Arrays.stream(req.getCookies())
+                            .filter(cookie -> cookie.getName().equals("username"))
+                            .map(Cookie::getValue)
+                            .findFirst()
+                            .orElse("");
 
-        return userList;
+        if(!username.equals("")){
+            result.put("resultCode","S-1");
+            result.put("msg","당신의 username(은)는 %s 입니다.".formatted(username));
+        } else {
+            result.put("resultCode","F-1");
+            result.put("msg","로그인 후 이용해주세요.");
+        }
+
+        return result;
+    }
+
+    @GetMapping("/member/logout")
+    @ResponseBody
+    public Map<String, String> tryLogout(HttpServletRequest req, HttpServletResponse resp) {
+        result = new LinkedHashMap<>();
+
+        if (req.getCookies() != null) {
+            Arrays.stream(req.getCookies())
+                    .filter(cookie -> cookie.getName().equals("username"))
+                    .forEach(cookie -> {
+                        cookie.setMaxAge(0); //쿠키의 수명을 0으로 만듬으로써 삭제
+                        resp.addCookie(cookie);
+                    });
+            result.put("resultCode","S-1");
+            result.put("msg","로그아웃 되었습니다.");
+        }
+
+        return result;
     }
 }
